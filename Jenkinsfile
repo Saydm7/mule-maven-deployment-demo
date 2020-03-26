@@ -1,31 +1,47 @@
 pipeline {
+
   agent any
+  environment {
+    //adding a comment for the commit test
+    DEPLOY_CREDS = credentials('deploy-anypoint-user')
+    MULE_VERSION = '4.2.2'
+    BG = "mybusineesgroup"
+    WORKER = "Micro"
+  }
   stages {
-    stage('Unit Test') {
+    stage('Build') {
       steps {
-        sh 'mvn clean test'
+            bat 'mvn -B -U -e -V clean -DskipTests package'
       }
     }
-    stage('Deploy Standalone') {
+
+    stage('Test') {
       steps {
-        sh 'mvn deploy -P standalone'
+          bat "mvn test"
       }
     }
-    stage('Deploy ARM') {
+
+     stage('Deploy Development') {
       environment {
-        ANYPOINT_CREDENTIALS = credentials('anypoint.credentials')
+        ENVIRONMENT = 'Sandbox'
+        APP_NAME = 'myfirstnewapp'
       }
       steps {
-        sh 'mvn deploy -P arm -Darm.target.name=local-3.9.0-ee -Danypoint.username=${ANYPOINT_CREDENTIALS_USR} -Danypoint.password=${ANYPOINT_CREDENTIALS_PSW}'
+            bat 'mvn -U -V -e -B -X -DskipTests deploy -DmuleDeploy -Dmule.version="%MULE_VERSION%" -Danypoint.username="%DEPLOY_CREDS_USR%" -Danypoint.password="%DEPLOY_CREDS_PSW%" -Dcloudhub.app="%APP_NAME%" -Dcloudhub.environment="%ENVIRONMENT%" -Dcloudhub.bg="%BG%" -Dcloudhub.worker="%WORKER%"'
       }
     }
-    stage('Deploy CloudHub') {
+    /*stage('Deploy Production') {
       environment {
-        ANYPOINT_CREDENTIALS = credentials('anypoint.credentials')
+        ENVIRONMENT = 'Production'
+        APP_NAME = 'hello'
       }
       steps {
-        sh 'mvn deploy -P cloudhub -Dmule.version=3.9.0 -Danypoint.username=${ANYPOINT_CREDENTIALS_USR} -Danypoint.password=${ANYPOINT_CREDENTIALS_PSW}'
+            bat 'mvn -U -V -e -B -DskipTests deploy -DmuleDeploy -Dmule.version="%MULE_VERSION%" -Danypoint.username="%DEPLOY_CREDS_USR%" -Danypoint.password="%DEPLOY_CREDS_PSW%" -Dcloudhub.app="%APP_NAME%" -Dcloudhub.environment="%ENVIRONMENT%" -Dcloudhub.bg="%BG%" -Dcloudhub.worker="%WORKER%"'
       }
-    }
+    }*/
+  }
+
+  tools {
+    maven 'M3'
   }
 }
